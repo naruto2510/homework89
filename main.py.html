@@ -1,0 +1,93 @@
+<html>
+<head>
+<title>main.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #2aacb8;}
+.s4 { color: #6aab73;}
+.s5 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+main.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">asyncio</span>
+
+<span class="s0">from </span><span class="s1">pywebio </span><span class="s0">import </span><span class="s1">start_server</span>
+<span class="s0">from </span><span class="s1">pywebio</span><span class="s2">.</span><span class="s1">input </span><span class="s0">import </span><span class="s2">*</span>
+<span class="s0">from </span><span class="s1">pywebio</span><span class="s2">.</span><span class="s1">output </span><span class="s0">import </span><span class="s2">*</span>
+<span class="s0">from </span><span class="s1">pywebio</span><span class="s2">.</span><span class="s1">session </span><span class="s0">import </span><span class="s1">defer_call</span><span class="s2">, </span><span class="s1">info </span><span class="s0">as </span><span class="s1">session_info</span><span class="s2">, </span><span class="s1">run_async</span><span class="s2">, </span><span class="s1">run_js</span>
+
+<span class="s1">chat_msgs </span><span class="s2">= []</span>
+<span class="s1">online_users </span><span class="s2">= </span><span class="s1">set</span><span class="s2">()</span>
+
+<span class="s1">MAX_MESSAGES_COUNT </span><span class="s2">= </span><span class="s3">100</span>
+
+
+<span class="s0">async def </span><span class="s1">main</span><span class="s2">():</span>
+    <span class="s0">global </span><span class="s1">chat_msgs</span>
+
+    <span class="s1">put_markdown</span><span class="s2">(</span><span class="s4">&quot;## 🧊 Добро пожаловать в онлайн чат!</span><span class="s0">\n</span><span class="s4">Исходный код данного чата укладывается в 100 строк кода!&quot;</span><span class="s2">)</span>
+
+    <span class="s1">msg_box </span><span class="s2">= </span><span class="s1">output</span><span class="s2">()</span>
+    <span class="s1">put_scrollable</span><span class="s2">(</span><span class="s1">msg_box</span><span class="s2">, </span><span class="s1">height</span><span class="s2">=</span><span class="s3">300</span><span class="s2">, </span><span class="s1">keep_bottom</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+    <span class="s1">nickname </span><span class="s2">= </span><span class="s0">await </span><span class="s1">input</span><span class="s2">(</span><span class="s4">&quot;Войти в чат&quot;</span><span class="s2">, </span><span class="s1">required</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">placeholder</span><span class="s2">=</span><span class="s4">&quot;Ваше имя&quot;</span><span class="s2">,</span>
+                           <span class="s1">validate</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">n</span><span class="s2">: </span><span class="s4">&quot;Такой ник уже используется!&quot; </span><span class="s0">if </span><span class="s1">n </span><span class="s0">in </span><span class="s1">online_users </span><span class="s0">or </span><span class="s1">n </span><span class="s2">== </span><span class="s4">'📢' </span><span class="s0">else None</span><span class="s2">)</span>
+    <span class="s1">online_users</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">nickname</span><span class="s2">)</span>
+
+    <span class="s1">chat_msgs</span><span class="s2">.</span><span class="s1">append</span><span class="s2">((</span><span class="s4">'📢'</span><span class="s2">, </span><span class="s4">f'`</span><span class="s0">{</span><span class="s1">nickname</span><span class="s0">}</span><span class="s4">` присоединился к чату!'</span><span class="s2">))</span>
+    <span class="s1">msg_box</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">put_markdown</span><span class="s2">(</span><span class="s4">f'📢 `</span><span class="s0">{</span><span class="s1">nickname</span><span class="s0">}</span><span class="s4">` присоединился к чату'</span><span class="s2">))</span>
+
+    <span class="s1">refresh_task </span><span class="s2">= </span><span class="s1">run_async</span><span class="s2">(</span><span class="s1">refresh_msg</span><span class="s2">(</span><span class="s1">nickname</span><span class="s2">, </span><span class="s1">msg_box</span><span class="s2">))</span>
+
+    <span class="s0">while True</span><span class="s2">:</span>
+        <span class="s1">data </span><span class="s2">= </span><span class="s0">await </span><span class="s1">input_group</span><span class="s2">(</span><span class="s4">&quot;💭 Новое сообщение&quot;</span><span class="s2">, [</span>
+            <span class="s1">input</span><span class="s2">(</span><span class="s1">placeholder</span><span class="s2">=</span><span class="s4">&quot;Текст сообщения ...&quot;</span><span class="s2">, </span><span class="s1">name</span><span class="s2">=</span><span class="s4">&quot;msg&quot;</span><span class="s2">),</span>
+            <span class="s1">actions</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s4">&quot;cmd&quot;</span><span class="s2">, </span><span class="s1">buttons</span><span class="s2">=[</span><span class="s4">&quot;Отправить&quot;</span><span class="s2">, {</span><span class="s4">'label'</span><span class="s2">: </span><span class="s4">&quot;Выйти из чата&quot;</span><span class="s2">, </span><span class="s4">'type'</span><span class="s2">: </span><span class="s4">'cancel'</span><span class="s2">}])</span>
+        <span class="s2">], </span><span class="s1">validate</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">m</span><span class="s2">: (</span><span class="s4">'msg'</span><span class="s2">, </span><span class="s4">&quot;Введите текст сообщения!&quot;</span><span class="s2">) </span><span class="s0">if </span><span class="s1">m</span><span class="s2">[</span><span class="s4">&quot;cmd&quot;</span><span class="s2">] == </span><span class="s4">&quot;Отправить&quot; </span><span class="s0">and not </span><span class="s1">m</span><span class="s2">[</span><span class="s4">'msg'</span><span class="s2">] </span><span class="s0">else None</span><span class="s2">)</span>
+
+        <span class="s0">if </span><span class="s1">data </span><span class="s0">is None</span><span class="s2">:</span>
+            <span class="s0">break</span>
+
+        <span class="s1">msg_box</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">put_markdown</span><span class="s2">(</span><span class="s4">f&quot;`</span><span class="s0">{</span><span class="s1">nickname</span><span class="s0">}</span><span class="s4">`: </span><span class="s0">{</span><span class="s1">data</span><span class="s2">[</span><span class="s4">'msg'</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">))</span>
+        <span class="s1">chat_msgs</span><span class="s2">.</span><span class="s1">append</span><span class="s2">((</span><span class="s1">nickname</span><span class="s2">, </span><span class="s1">data</span><span class="s2">[</span><span class="s4">'msg'</span><span class="s2">]))</span>
+
+    <span class="s1">refresh_task</span><span class="s2">.</span><span class="s1">close</span><span class="s2">()</span>
+
+    <span class="s1">online_users</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">nickname</span><span class="s2">)</span>
+    <span class="s1">toast</span><span class="s2">(</span><span class="s4">&quot;Вы вышли из чата!&quot;</span><span class="s2">)</span>
+    <span class="s1">msg_box</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">put_markdown</span><span class="s2">(</span><span class="s4">f'📢 Пользователь `</span><span class="s0">{</span><span class="s1">nickname</span><span class="s0">}</span><span class="s4">` покинул чат!'</span><span class="s2">))</span>
+    <span class="s1">chat_msgs</span><span class="s2">.</span><span class="s1">append</span><span class="s2">((</span><span class="s4">'📢'</span><span class="s2">, </span><span class="s4">f'Пользователь `</span><span class="s0">{</span><span class="s1">nickname</span><span class="s0">}</span><span class="s4">` покинул чат!'</span><span class="s2">))</span>
+
+    <span class="s1">put_buttons</span><span class="s2">([</span><span class="s4">'Перезайти'</span><span class="s2">], </span><span class="s1">onclick</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">btn</span><span class="s2">: </span><span class="s1">run_js</span><span class="s2">(</span><span class="s4">'window.location.reload()'</span><span class="s2">))</span>
+
+
+<span class="s0">async def </span><span class="s1">refresh_msg</span><span class="s2">(</span><span class="s1">nickname</span><span class="s2">, </span><span class="s1">msg_box</span><span class="s2">):</span>
+    <span class="s0">global </span><span class="s1">chat_msgs</span>
+    <span class="s1">last_idx </span><span class="s2">= </span><span class="s1">len</span><span class="s2">(</span><span class="s1">chat_msgs</span><span class="s2">)</span>
+
+    <span class="s0">while True</span><span class="s2">:</span>
+        <span class="s0">await </span><span class="s1">asyncio</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s3">1</span><span class="s2">)</span>
+
+        <span class="s0">for </span><span class="s1">m </span><span class="s0">in </span><span class="s1">chat_msgs</span><span class="s2">[</span><span class="s1">last_idx</span><span class="s2">:]:</span>
+            <span class="s0">if </span><span class="s1">m</span><span class="s2">[</span><span class="s3">0</span><span class="s2">] != </span><span class="s1">nickname</span><span class="s2">:  </span><span class="s5"># if not a message from current user</span>
+                <span class="s1">msg_box</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">put_markdown</span><span class="s2">(</span><span class="s4">f&quot;`</span><span class="s0">{</span><span class="s1">m</span><span class="s2">[</span><span class="s3">0</span><span class="s2">]</span><span class="s0">}</span><span class="s4">`: </span><span class="s0">{</span><span class="s1">m</span><span class="s2">[</span><span class="s3">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">))</span>
+
+        <span class="s5"># remove expired</span>
+        <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">chat_msgs</span><span class="s2">) &gt; </span><span class="s1">MAX_MESSAGES_COUNT</span><span class="s2">:</span>
+            <span class="s1">chat_msgs </span><span class="s2">= </span><span class="s1">chat_msgs</span><span class="s2">[</span><span class="s1">len</span><span class="s2">(</span><span class="s1">chat_msgs</span><span class="s2">) // </span><span class="s3">2</span><span class="s2">:]</span>
+
+        <span class="s1">last_idx </span><span class="s2">= </span><span class="s1">len</span><span class="s2">(</span><span class="s1">chat_msgs</span><span class="s2">)</span>
+
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s4">&quot;__main__&quot;</span><span class="s2">:</span>
+    <span class="s1">start_server</span><span class="s2">(</span><span class="s1">main</span><span class="s2">, </span><span class="s1">debug</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">port</span><span class="s2">=</span><span class="s3">8080</span><span class="s2">, </span><span class="s1">cdn</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span></pre>
+</body>
+</html>
